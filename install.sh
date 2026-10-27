@@ -7,14 +7,14 @@ fail() {
 }
 
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then
-  printf 'Usage: bash install.sh [VERSION]\nDefault: 0.0.1\nDestination: QUERIO_INSTALL_DIR or ~/.local/bin\nRequires: gh authenticated with access to Querio-App/cli\n'
+  printf 'Usage: bash install.sh [VERSION]\nDefault: 0.0.1\nDestination: QUERIO_INSTALL_DIR or ~/.local/bin\nRequires: curl and sha256sum or shasum\n'
   exit 0
 fi
 [[ $# -le 1 ]] || fail 'Expected one version argument; use --help.'
 version=${1:-0.0.1}
 version=${version#v}
 [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail 'Version must look like 0.0.1.'
-command -v gh >/dev/null || fail 'Install GitHub CLI from https://cli.github.com/ and run gh auth login.'
+command -v curl >/dev/null || fail 'Install curl to download Querio.'
 
 case $(uname -s) in
   Darwin) os=darwin ;;
@@ -47,9 +47,11 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 printf 'Downloading Querio %s (%s/%s)...\n' "$version" "$os" "$arch" >&2
-gh release download "v$version" --repo Querio-App/cli \
-  --pattern "$asset" --pattern SHA256SUMS --dir "$work" || \
-  fail 'Download failed. Check the version, repository access, and gh auth status.'
+release="https://github.com/Querio-App/cli/releases/download/v$version"
+for file in "$asset" SHA256SUMS; do
+  curl -fsSL "$release/$file" -o "$work/$file" || \
+    fail 'Download failed. Check the version and your network connection.'
+done
 expected=$(awk -v name="$asset" '$2 == name { print $1 }' "$work/SHA256SUMS")
 [[ $expected =~ ^[0-9a-f]{64}$ ]] || fail 'Checksum entry is missing or invalid.'
 actual=$("${hash[@]}" "$work/$asset")

@@ -35,18 +35,21 @@ class InstallerTests(unittest.TestCase):
             "TEST_FAIL_DOWNLOAD": "",
         }
         self.executable("uname", '#!/bin/sh\ncase "$1" in -s) echo "$TEST_OS";; -m) echo "$TEST_ARCH";; esac\n')
-        self.executable("gh", f"#!{sys.executable}\n" + '''import json, os, pathlib, shutil, sys
+        self.executable("curl", f"#!{sys.executable}\n" + '''import json, os, pathlib, shutil, sys
 args = sys.argv[1:]
-assert args[:5] == ["release", "download", "v0.0.1", "--repo", "Querio-App/cli"]
+assert len(args) == 4 and args[0] == "-fsSL" and args[2] == "-o"
+prefix = "https://github.com/Querio-App/cli/releases/download/v0.0.1/"
+assert args[1].startswith(prefix)
+name = args[1][len(prefix):]
 root = pathlib.Path(os.environ["TEST_ROOT"])
-patterns = [args[i + 1] for i, arg in enumerate(args) if arg == "--pattern"]
-(root / "requested.json").write_text(json.dumps(patterns))
-if os.environ["TEST_FAIL_DOWNLOAD"]:
+requested = root / "requested.json"
+names = json.loads(requested.read_text()) if requested.exists() else []
+requested.write_text(json.dumps(names + [name]))
+destination = pathlib.Path(args[3])
+(root / "download-dir").write_text(str(destination.parent))
+if os.environ["TEST_FAIL_DOWNLOAD"] in ("1", name):
     sys.exit(1)
-destination = pathlib.Path(args[args.index("--dir") + 1])
-(root / "download-dir").write_text(str(destination))
-for name in patterns:
-    shutil.copyfile(root / "assets" / name, destination / name)
+shutil.copyfile(root / "assets" / name, destination)
 ''')
         self.fixture()
 
@@ -63,6 +66,7 @@ for name in patterns:
         return name
 
     def run_installer(self, *args):
+        (self.root / "requested.json").unlink(missing_ok=True)
         result = subprocess.run(["bash", str(INSTALLER), *args], env=self.env, capture_output=True, text=True)
         downloaded = self.root / "download-dir"
         if downloaded.exists():
@@ -104,8 +108,10 @@ for name in patterns:
                 self.assert_preserved(self.run_installer(), "Checksum entry is missing or invalid")
 
     def test_download_failure_preserves_installation(self):
-        self.env["TEST_FAIL_DOWNLOAD"] = "1"
-        self.assert_preserved(self.run_installer(), "Download failed")
+        for name in ["querio_0.0.1_linux_amd64", "SHA256SUMS"]:
+            with self.subTest(asset=name):
+                self.env["TEST_FAIL_DOWNLOAD"] = name
+                self.assert_preserved(self.run_installer(), "Download failed")
 
     def test_wrong_binary_version_preserves_installation(self):
         self.fixture(version="0.0.2")
