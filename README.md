@@ -1,15 +1,14 @@
 # Querio CLI
 
-Querio from your terminal or coding agent. Private distribution for macOS and Linux, on Intel/AMD and ARM64.
+Querio from your terminal or coding agent. Available for macOS and Linux, on Intel/AMD and ARM64.
 
 ## Install 0.0.1
 
-Requires [GitHub CLI](https://cli.github.com/) and access to this repository.
+Requires `curl` and either `sha256sum` or `shasum`. No GitHub account or authentication is needed.
 
 ```sh
-gh auth login
 tmp=$(mktemp -d)
-gh release download v0.0.1 -R Querio-App/cli -p install.sh -D "$tmp" &&
+curl -fsSL https://raw.githubusercontent.com/Querio-App/cli/main/install.sh -o "$tmp/install.sh" &&
   bash "$tmp/install.sh" 0.0.1
 rm -rf "$tmp"
 ```
@@ -24,6 +23,6 @@ querio --help
 querio code skill
 ```
 
-Every command has `--help`. Downloads are private; API permissions still come from your Querio account. Do not redistribute.
+Every command has `--help`. The CLI is publicly available; API permissions come from your Querio account.
 
 Uninstall: `rm ~/.local/bin/querio` (or remove it from your chosen install directory). Credentials are left untouched.
