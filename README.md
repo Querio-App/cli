@@ -2,14 +2,14 @@
 
 Querio from your terminal or coding agent. Available for macOS and Linux, on Intel/AMD and ARM64.
 
-## Install 0.0.1
+## Install 0.0.2
 
 Requires `curl` and either `sha256sum` or `shasum`. No GitHub account or authentication is needed.
 
 ```sh
 tmp=$(mktemp -d)
 curl -fsSL https://raw.githubusercontent.com/Querio-App/cli/main/install.sh -o "$tmp/install.sh" &&
-  bash "$tmp/install.sh" 0.0.1
+  bash "$tmp/install.sh" 0.0.2
 rm -rf "$tmp"
 ```
 

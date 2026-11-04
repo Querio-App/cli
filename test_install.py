@@ -38,7 +38,7 @@ class InstallerTests(unittest.TestCase):
         self.executable("curl", f"#!{sys.executable}\n" + '''import json, os, pathlib, shutil, sys
 args = sys.argv[1:]
 assert len(args) == 4 and args[0] == "-fsSL" and args[2] == "-o"
-prefix = "https://github.com/Querio-App/cli/releases/download/v0.0.1/"
+prefix = "https://github.com/Querio-App/cli/releases/download/v0.0.2/"
 assert args[1].startswith(prefix)
 name = args[1][len(prefix):]
 root = pathlib.Path(os.environ["TEST_ROOT"])
@@ -58,8 +58,8 @@ shutil.copyfile(root / "assets" / name, destination)
         path.write_text(content)
         path.chmod(0o755)
 
-    def fixture(self, os_name="linux", arch="amd64", version="0.0.1"):
-        name = f"querio_0.0.1_{os_name}_{arch}"
+    def fixture(self, os_name="linux", arch="amd64", version="0.0.2"):
+        name = f"querio_0.0.2_{os_name}_{arch}"
         content = f"#!/bin/sh\nprintf '{version}\\n'\n".encode()
         (self.assets / name).write_bytes(content)
         (self.assets / "SHA256SUMS").write_text(f"{hashlib.sha256(content).hexdigest()}  {name}\n")
@@ -89,14 +89,14 @@ shutil.copyfile(root / "assets" / name, destination)
             with self.subTest(system=system, machine=machine):
                 name = self.fixture(os_name, arch)
                 self.env.update(TEST_OS=system, TEST_ARCH=machine)
-                result = self.run_installer("v0.0.1")
+                result = self.run_installer("v0.0.2")
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(json.loads((self.root / "requested.json").read_text()), [name, "SHA256SUMS"])
                 self.assertEqual(self.destination.stat().st_mode & 0o777, 0o755)
-                self.assertEqual(subprocess.check_output([self.destination, "--version"], text=True), "0.0.1\n")
+                self.assertEqual(subprocess.check_output([self.destination, "--version"], text=True), "0.0.2\n")
 
     def test_bad_checksum_preserves_installation(self):
-        (self.assets / "querio_0.0.1_linux_amd64").write_text("corrupted download")
+        (self.assets / "querio_0.0.2_linux_amd64").write_text("corrupted download")
         self.assert_preserved(self.run_installer(), "Checksum mismatch")
 
     def test_missing_or_duplicate_checksum_preserves_installation(self):
@@ -108,13 +108,13 @@ shutil.copyfile(root / "assets" / name, destination)
                 self.assert_preserved(self.run_installer(), "Checksum entry is missing or invalid")
 
     def test_download_failure_preserves_installation(self):
-        for name in ["querio_0.0.1_linux_amd64", "SHA256SUMS"]:
+        for name in ["querio_0.0.2_linux_amd64", "SHA256SUMS"]:
             with self.subTest(asset=name):
                 self.env["TEST_FAIL_DOWNLOAD"] = name
                 self.assert_preserved(self.run_installer(), "Download failed")
 
     def test_wrong_binary_version_preserves_installation(self):
-        self.fixture(version="0.0.2")
+        self.fixture(version="0.0.1")
         self.assert_preserved(self.run_installer(), "Binary version mismatch")
 
     def test_symlink_is_not_replaced(self):
@@ -133,6 +133,7 @@ shutil.copyfile(root / "assets" / name, destination)
         result = self.run_installer("--help")
         self.assertEqual(result.returncode, 0)
         self.assertIn("Usage:", result.stdout)
+        self.assertIn("Default: 0.0.2", result.stdout)
         self.assert_preserved(self.run_installer("../0.0.1"), "Version must look like")
         self.assertFalse((self.root / "requested.json").exists())
 
