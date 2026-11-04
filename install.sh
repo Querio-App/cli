@@ -7,11 +7,11 @@ fail() {
 }
 
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then
-  printf 'Usage: bash install.sh [VERSION]\nDefault: 0.0.1\nDestination: QUERIO_INSTALL_DIR or ~/.local/bin\nRequires: curl and sha256sum or shasum\n'
+  printf 'Usage: bash install.sh [VERSION]\nDefault: 0.0.2\nDestination: QUERIO_INSTALL_DIR or ~/.local/bin\nRequires: curl and sha256sum or shasum\n'
   exit 0
 fi
 [[ $# -le 1 ]] || fail 'Expected one version argument; use --help.'
-version=${1:-0.0.1}
+version=${1:-0.0.2}
 version=${version#v}
 [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail 'Version must look like 0.0.1.'
 command -v curl >/dev/null || fail 'Install curl to download Querio.'
