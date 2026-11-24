@@ -37,6 +37,9 @@ class InstallerTests(unittest.TestCase):
         self.executable("uname", '#!/bin/sh\ncase "$1" in -s) echo "$TEST_OS";; -m) echo "$TEST_ARCH";; esac\n')
         self.executable("curl", f"#!{sys.executable}\n" + '''import json, os, pathlib, shutil, sys
 args = sys.argv[1:]
+if args == ["-fsSI", "-o", "/dev/null", "-w", "%{redirect_url}", "https://github.com/Querio-App/cli/releases/latest"]:
+    print("https://github.com/Querio-App/cli/releases/tag/" + os.environ.get("TEST_LATEST", "v0.0.2"))
+    sys.exit(0)
 assert len(args) == 4 and args[0] == "-fsSL" and args[2] == "-o"
 prefix = "https://github.com/Querio-App/cli/releases/download/v0.0.2/"
 assert args[1].startswith(prefix)
@@ -133,7 +136,7 @@ shutil.copyfile(root / "assets" / name, destination)
         result = self.run_installer("--help")
         self.assertEqual(result.returncode, 0)
         self.assertIn("Usage:", result.stdout)
-        self.assertIn("Default: 0.0.2", result.stdout)
+        self.assertIn("Default: latest release", result.stdout)
         self.assert_preserved(self.run_installer("../0.0.1"), "Version must look like")
         self.assertFalse((self.root / "requested.json").exists())
 
@@ -142,6 +145,11 @@ shutil.copyfile(root / "assets" / name, destination)
         result = self.run_installer()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((self.root / ".local/bin/querio").is_file())
+
+    def test_bad_latest_tag_preserves_installation_but_pin_still_works(self):
+        self.env["TEST_LATEST"] = "not-a-version"
+        self.assert_preserved(self.run_installer(), "Unexpected latest release URL")
+        self.assertEqual(self.run_installer("0.0.2").returncode, 0)
 
     @unittest.skipUnless(shutil.which("shasum"), "shasum not installed")
     def test_shasum_fallback(self):

@@ -7,13 +7,10 @@ fail() {
 }
 
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then
-  printf 'Usage: bash install.sh [VERSION]\nDefault: 0.0.2\nDestination: QUERIO_INSTALL_DIR or ~/.local/bin\nRequires: curl and sha256sum or shasum\n'
+  printf 'Usage: bash install.sh [VERSION]\nDefault: latest release\nDestination: QUERIO_INSTALL_DIR or ~/.local/bin\nRequires: curl and sha256sum or shasum\n'
   exit 0
 fi
 [[ $# -le 1 ]] || fail 'Expected one version argument; use --help.'
-version=${1:-0.0.2}
-version=${version#v}
-[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail 'Version must look like 0.0.1.'
 command -v curl >/dev/null || fail 'Install curl to download Querio.'
 
 case $(uname -s) in
@@ -35,6 +32,15 @@ else
   fail 'Install sha256sum or shasum to verify the download.'
 fi
 
+releases=https://github.com/Querio-App/cli/releases
+if [[ $# == 0 ]]; then
+  tag_url=$(curl -fsSI -o /dev/null -w '%{redirect_url}' "$releases/latest") || fail 'Could not resolve latest release.'
+  [[ $tag_url == "$releases/tag/v"* ]] || fail 'Unexpected latest release URL.'
+  version=${tag_url#"$releases/tag/v"}
+else
+  version=${1#v}
+fi
+[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail 'Version must look like 0.0.1.'
 asset="querio_${version}_${os}_${arch}"
 work=$(mktemp -d)
 pending=
@@ -47,7 +53,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 printf 'Downloading Querio %s (%s/%s)...\n' "$version" "$os" "$arch" >&2
-release="https://github.com/Querio-App/cli/releases/download/v$version"
+release="$releases/download/v$version"
 for file in "$asset" SHA256SUMS; do
   curl -fsSL "$release/$file" -o "$work/$file" || \
     fail 'Download failed. Check the version and your network connection.'
